@@ -1,1 +1,1 @@
-# NCYU_AI
+# NCYU_AI 教材
