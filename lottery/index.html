@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>網頁版抽籤程式 | NCYU AI</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-soft: #273449;
+    --accent: #38bdf8;
+    --accent-2: #f472b6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --good: #34d399;
+    --danger: #f87171;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #1e3a5f 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { color: var(--muted); margin: 6px 0 0; font-size: .95rem; }
+
+  .layout {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+  .card h2 { margin: 0 0 12px; font-size: 1.1rem; }
+
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    resize: vertical;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid rgba(148,163,184,.25);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 1rem;
+    line-height: 1.6;
+    font-family: inherit;
+  }
+  textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  label.field { font-size: .9rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  input[type="number"] {
+    width: 72px; padding: 8px; border-radius: 8px; border: 1px solid rgba(148,163,184,.25);
+    background: var(--bg); color: var(--text); font-size: 1rem;
+  }
+  .switch { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  button {
+    border: none; border-radius: 12px; padding: 12px 18px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: transform .08s ease, filter .15s ease; color: #07111f;
+  }
+  button:active { transform: translateY(1px) scale(.99); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #0ea5e9); flex: 1; min-width: 140px; }
+  .btn-ghost { background: var(--card-soft); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+
+  .count { color: var(--muted); font-size: .85rem; margin-top: 8px; }
+
+  .stage {
+    min-height: 120px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;
+    padding: 16px;
+    background: var(--bg);
+    border-radius: 12px;
+    border: 1px dashed rgba(148,163,184,.25);
+  }
+  .winner {
+    background: linear-gradient(135deg, var(--accent-2), #fb7185);
+    color: #1a0a14;
+    padding: 14px 22px;
+    border-radius: 999px;
+    font-size: clamp(1.1rem, 3vw, 1.6rem);
+    font-weight: 800;
+    box-shadow: 0 8px 24px rgba(244,114,182,.35);
+    animation: pop .4s ease;
+  }
+  .stage .placeholder { color: var(--muted); }
+  .rolling { font-size: clamp(1.4rem, 5vw, 2.2rem); font-weight: 800; color: var(--accent); }
+
+  @keyframes pop {
+    0% { transform: scale(.4); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .history { margin-top: 16px; }
+  .history h3 { font-size: .9rem; color: var(--muted); margin: 0 0 8px; }
+  .history ol { margin: 0; padding-left: 20px; max-height: 160px; overflow-y: auto; }
+  .history li { padding: 3px 0; font-size: .92rem; }
+  .history li span { color: var(--muted); font-size: .8rem; margin-left: 6px; }
+
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 28px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🎲 網頁版抽籤程式</h1>
+    <p>輸入名單,一鍵隨機抽出幸運兒 ── NCYU AI 教材範例</p>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2>① 抽籤名單</h2>
+      <textarea id="names" placeholder="每行輸入一個名字 / 項目,例如:&#10;王小明&#10;陳大華&#10;林美麗&#10;張志強"></textarea>
+      <div class="count" id="count">目前 0 個項目</div>
+
+      <div class="row">
+        <label class="field">抽出數量
+          <input type="number" id="drawCount" min="1" value="1">
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="noRepeat" checked>
+          抽過不重複(從名單移除)
+        </label>
+      </div>
+
+      <div class="btns">
+        <button class="btn-ghost" id="sampleBtn">載入範例</button>
+        <button class="btn-danger" id="clearBtn">清空</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>② 抽籤結果</h2>
+      <div class="stage" id="stage">
+        <span class="placeholder">按下「開始抽籤」即可開獎 🎉</span>
+      </div>
+
+      <div class="btns">
+        <button class="btn-primary" id="drawBtn">🎯 開始抽籤</button>
+        <button class="btn-ghost" id="resetBtn">重設紀錄</button>
+      </div>
+
+      <div class="history">
+        <h3>抽籤紀錄</h3>
+        <ol id="history"></ol>
+      </div>
+    </section>
+  </main>
+
+  <footer>© NCYU AI 教材 · 純前端 HTML / CSS / JavaScript,無需後端</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const namesEl = $("names");
+  const countEl = $("count");
+  const stageEl = $("stage");
+  const historyEl = $("history");
+  const drawCountEl = $("drawCount");
+  const noRepeatEl = $("noRepeat");
+  const drawBtn = $("drawBtn");
+
+  let history = [];
+  let rolling = false;
+
+  const SAMPLE = ["王小明", "陳大華", "林美麗", "張志強", "李雅婷", "黃建宏", "吳佩珊", "劉俊傑"];
+
+  function parseNames() {
+    return namesEl.value
+      .split("\n")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+
+  function updateCount() {
+    const n = parseNames().length;
+    countEl.textContent = `目前 ${n} 個項目`;
+    drawCountEl.max = Math.max(1, n);
+  }
+
+  // Fisher–Yates 洗牌,確保公平隨機
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function renderWinners(winners) {
+    stageEl.innerHTML = "";
+    winners.forEach((w, i) => {
+      const span = document.createElement("span");
+      span.className = "winner";
+      span.textContent = w;
+      span.style.animationDelay = (i * 0.12) + "s";
+      stageEl.appendChild(span);
+    });
+  }
+
+  function renderHistory() {
+    historyEl.innerHTML = "";
+    history.forEach((h) => {
+      const li = document.createElement("li");
+      li.textContent = h.winners.join("、");
+      const t = document.createElement("span");
+      t.textContent = h.time;
+      li.appendChild(t);
+      historyEl.appendChild(li);
+    });
+  }
+
+  function draw() {
+    if (rolling) return;
+    const pool = parseNames();
+    if (pool.length === 0) {
+      stageEl.innerHTML = '<span class="placeholder">⚠️ 名單是空的,請先輸入項目</span>';
+      return;
+    }
+    let count = parseInt(drawCountEl.value, 10) || 1;
+    count = Math.min(Math.max(1, count), pool.length);
+
+    rolling = true;
+    drawBtn.disabled = true;
+
+    // 抽獎滾動動畫
+    let ticks = 0;
+    const total = 18;
+    stageEl.innerHTML = '<span class="rolling"></span>';
+    const rollEl = stageEl.querySelector(".rolling");
+
+    const timer = setInterval(() => {
+      rollEl.textContent = pool[Math.floor(Math.random() * pool.length)];
+      ticks++;
+      if (ticks >= total) {
+        clearInterval(timer);
+        finish(pool, count);
+      }
+    }, 70);
+  }
+
+  function finish(pool, count) {
+    const winners = shuffle(pool).slice(0, count);
+    renderWinners(winners);
+
+    history.unshift({
+      winners,
+      time: new Date().toLocaleTimeString("zh-TW", { hour12: false }),
+    });
+    renderHistory();
+
+    if (noRepeatEl.checked) {
+      const remaining = pool.filter((p) => !winners.includes(p));
+      // 注意:若名單有重複名字,僅移除被抽中的相同數量
+      const toRemove = winners.slice();
+      const newList = [];
+      parseNames().forEach((p) => {
+        const idx = toRemove.indexOf(p);
+        if (idx !== -1) { toRemove.splice(idx, 1); }
+        else { newList.push(p); }
+      });
+      namesEl.value = newList.join("\n");
+      updateCount();
+    }
+
+    rolling = false;
+    drawBtn.disabled = false;
+  }
+
+  // 事件綁定
+  drawBtn.addEventListener("click", draw);
+  namesEl.addEventListener("input", updateCount);
+  $("sampleBtn").addEventListener("click", () => {
+    namesEl.value = SAMPLE.join("\n");
+    updateCount();
+  });
+  $("clearBtn").addEventListener("click", () => {
+    namesEl.value = "";
+    updateCount();
+    stageEl.innerHTML = '<span class="placeholder">按下「開始抽籤」即可開獎 🎉</span>';
+  });
+  $("resetBtn").addEventListener("click", () => {
+    history = [];
+    renderHistory();
+    stageEl.innerHTML = '<span class="placeholder">按下「開始抽籤」即可開獎 🎉</span>';
+  });
+
+  updateCount();
+})();
+</script>
+</body>
+</html>
